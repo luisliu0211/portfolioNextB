@@ -9,7 +9,6 @@ const port = 8080;
 const app = express();
 const { v4: uuidv4 } = require('uuid');
 // 上傳照片用的套 multer
-const test1 = require('./test');
 const multer = require('multer');
 const cookieParser = require('cookie-parser');
 // 設定 Multer 存入的空間
