@@ -51,7 +51,7 @@ app.use(
 app.use((req, res, next) => {
   const allowedOrigins = [
     'http://localhost:3000',
-    'https://99e1-2001-b011-5c06-fc7d-618e-80f2-28dc-b0aa.ngrok-free.app',
+    'https://portfolio-next-neon.vercel.app',
   ];
   const origin = req.headers.origin;
 
@@ -272,6 +272,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 app.get('/api/posts/:id', (req, res) => {
   // 执行数据库查询
   const postId = req.params.id;
+  console.log(postId);
   console.log('Received API request');
   db.query(
     'SELECT * FROM post_Detail WHERE id=?',
@@ -282,6 +283,7 @@ app.get('/api/posts/:id', (req, res) => {
         res.status(500).send('Internal Server Error');
         return;
       }
+      console.log(results, 'rr');
       // console.log('Query executed successfully');
       res.json(results);
       // 将查询结果发送给前端
