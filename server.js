@@ -2,10 +2,10 @@
 const express = require('express');
 const cors = require('cors'); // 引入 CORS 模組
 const mysql = require('mysql2');
-const fs = require('fs');
 const matter = require('gray-matter');
 const path = require('path');
 const port = 8080;
+const fs = require('fs');
 const app = express();
 const { v4: uuidv4 } = require('uuid');
 // 上傳照片用的套 multer
@@ -85,13 +85,6 @@ const db = mysql.createConnection({
   database: process.env.DB_NAME,
   port: process.env.DB_PORT,
 });
-// const db = mysql.createConnection({
-//   host: 'sfo1.clusters.zeabur.com', // MySQL 伺服器位置
-//   user: 'root', // MySQL 用戶名
-//   password: '31422', // MySQL 密碼
-//   database: 'zeabur', // 你的資料庫名稱
-//   port,
-// });
 
 db.connect((err) => {
   if (err) {
@@ -221,6 +214,37 @@ app.post('/api/saveLoginData', (req, res) => {
         console.log('Insert query executed successfully');
         res.status(200).json({ message: 'Data saved successfully' });
       });
+    }
+  });
+});
+app.post('/api/json/saveFile', (req, res) => {
+  const jsonData = req.body.data;
+  const title = req.body.title;
+  console.log(jsonData);
+  const outputPath = path.join(__dirname, 'public', 'database'); // 指定目錄 'output'
+  // const jsonString = JSON.stringify(jsonData, null, 2);
+  // res.setHeader('Content-Type', 'application/json'); // 設定 Content-Type 為 application/json
+  fs.writeFileSync(path.join(outputPath, `${title}.json`), jsonData);
+  res.status(200).json({ message: 'Data saved successfully.' });
+});
+app.get('/api/json/readFile', (req, res) => {
+  const fileTitle = req.query.fileName;
+  const filePath = path.join(
+    __dirname,
+    'public',
+    'database',
+    `${fileTitle}.json`
+  );
+  fs.readFile(filePath, 'utf-8', (err, data) => {
+    if (err) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    } else {
+      try {
+        const jsonData = JSON.parse(data);
+        res.json(jsonData);
+      } catch (parseError) {
+        res.status(500).json({ error: 'Error parsing JSON data' });
+      }
     }
   });
 });
