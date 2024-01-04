@@ -292,7 +292,27 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
-
+app.get('/api/quotes/:id', (req, res) => {
+  // 执行数据库查询
+  const quoteId = req.params.id;
+  console.log(quoteId);
+  console.log('Received API request');
+  db.query(
+    'SELECT * FROM quotationList WHERE id=?',
+    [quoteId],
+    (error, results, fields) => {
+      if (error) {
+        console.error('Error executing query: ' + error.stack);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+      console.log(results, 'rr');
+      // console.log('Query executed successfully');
+      res.json(results);
+      // 将查询结果发送给前端
+    }
+  );
+});
 app.get('/api/posts/:id', (req, res) => {
   // 执行数据库查询
   const postId = req.params.id;
@@ -341,9 +361,9 @@ app.get('/api/posts/:id', (req, res) => {
 //   res.json(allPostsData);
 // });
 app.get('/api/todoList', (req, res) => {
-  const queryInsertNew = 'SELECT * FROM todoList where user_id=?';
+  const querySelect = 'SELECT * FROM todoList where user_id=?';
 
-  db.query(queryInsertNew, [1], (err, result) => {
+  db.query(querySelect, [1], (err, result) => {
     if (err) {
       console.error('Error executing insert query: ' + err.stack);
       res.status(500).send('Internal Server Error');
@@ -354,12 +374,38 @@ app.get('/api/todoList', (req, res) => {
     // res.status(200).json({ message: 'Data query successfully' });
   });
 });
+app.get('/api/quotations', (req, res) => {
+  // const { select } = req.query;
+  console.log(req.query);
+  // 从查询参数中获取 selectedRows
+  const { selected } = req.query;
+  // 将 selectedRows 转换为数组
+  let selectedRowsArray;
+  let querySelect;
+  if (selected) {
+    selectedRowsArray = selected.split(',');
+    querySelect = `SELECT * FROM quotationList WHERE id IN (${selectedRowsArray.join(
+      ','
+    )})`;
+  } else {
+    querySelect = `SELECT * FROM quotationList`;
+  }
 
-app.post('/api/quotation', (req, res) => {
+  db.query(querySelect, (err, result) => {
+    if (err) {
+      console.error('Error executing insert query: ' + err.stack);
+      res.status(500).send('Internal Server Error');
+      return;
+    }
+
+    res.json(result);
+    // res.status(200).json({ message: 'Data query successfully' });
+  });
+});
+app.post('/api/quotationAdd', (req, res) => {
   const { quote } = req.body;
   console.log(quote, 'qqq');
   let {
-    id,
     authur,
     team,
     createDate,
@@ -372,10 +418,13 @@ app.post('/api/quotation', (req, res) => {
       other,
       densityWarp,
       densityWeft,
-      fabrcProcessFee,
-      fabrciCost,
+      fabricProcessFee,
+      fabricCost,
       totalWastage,
-      yarnInfo,
+      totalYarnCost,
+      portionText,
+      yarnTextString,
+      yarnInfo, //TBA
     },
     salesCost: {
       excuteCost,
@@ -394,19 +443,15 @@ app.post('/api/quotation', (req, res) => {
       costUSDY,
     },
     dyeCost: {
-      dyeLightCost,
       dyeAverageCost,
-      dyeDarkCost,
       process,
       specialProcess,
       RDReference,
       totalCost,
-      totalCostD,
-      totalCostL,
     },
   } = quote;
   const queryInsertNew =
-    'INSERT INTO quotationList (userId,team,createDate,lastRevise,state,yarnCostId,dyeCostId,salesCostId,clientId,fabricItem,description,width,gsm,gy,brand) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ';
+    'INSERT INTO quotationList (userId,team,createDate,lastRevise,state,fabricSpecStr,clientId,fabricItem,description,width,gsm,gy,brand,machineType,machineSpec,other,densityWarp,densityWeft,fabricProcessFee,fabricCost,totalWastage,totalYarnCost,portionText,yarnTextStr,dyeCost,process,specialProcess,totalCost,RDReference,excuteCost,shippingCost,testingCost,profit,exchangeRate,tradeTerm,quoteDue,quoteUSDY,quoteUSDM,quoteTWDY,quoteTWDM,costTWDKG,costUSDKG,costUSDY) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
   db.query(
     queryInsertNew,
     [
@@ -415,9 +460,7 @@ app.post('/api/quotation', (req, res) => {
       createDate,
       lastRevise,
       state,
-      ,
-      ,
-      ,
+      fabricSpecString,
       clientId,
       fabricItem,
       description,
@@ -425,10 +468,48 @@ app.post('/api/quotation', (req, res) => {
       gsm,
       gy,
       brand,
+      machineType,
+      machineSpec,
+      other,
+      densityWarp,
+      densityWeft,
+      fabricProcessFee,
+      fabricCost,
+      totalWastage,
+      totalYarnCost,
+      portionText,
+      yarnTextString,
+      dyeAverageCost,
+      process,
+      specialProcess,
+      totalCost,
+      RDReference,
+      excuteCost,
+      shippingCost,
+      testingCost,
+      profit,
+      exchangeRate,
+      tradeTerm,
+      quoteDueDate,
+      quoteUSDY,
+      quoteUSDM,
+      quoteTWDY,
+      quoteTWDM,
+      costTWDKG,
+      costUSDKG,
+      costUSDY,
     ],
-    (error, results) => {}
+    (error, results) => {
+      if (error) {
+        console.error('執行插入查詢時發生錯誤：' + error.stack);
+        res.status(500).send('內部伺服器錯誤');
+        return;
+      }
+      console.log('插入查詢成功執行');
+      // 在數據庫操作完成後發送回應
+      res.status(200).json({ message: '數據傳遞成功' });
+    }
   );
-  res.status(200).json({ message: 'Data pass successfully' });
 });
 app.post('/api/todoList', (req, res) => {
   const { todos } = req.body;
