@@ -411,7 +411,16 @@ app.post('/api/quotationAdd', (req, res) => {
     createDate,
     lastRevise,
     state,
-    fabricInfo: { clientId, fabricItem, description, width, gsm, gy, brand },
+    fabricInfo: {
+      clientId,
+      fabricItem,
+      description,
+      width,
+      gsm,
+      gy,
+      brand,
+      fabricSpecString,
+    },
     yarnCost: {
       machineType,
       machineSpec,
@@ -450,66 +459,70 @@ app.post('/api/quotationAdd', (req, res) => {
       totalCost,
     },
   } = quote;
-  const queryInsertNew =
-    'INSERT INTO quotationList (userId,team,createDate,lastRevise,state,fabricSpecStr,clientId,fabricItem,description,width,gsm,gy,brand,machineType,machineSpec,other,densityWarp,densityWeft,fabricProcessFee,fabricCost,totalWastage,totalYarnCost,portionText,yarnTextStr,dyeCost,process,specialProcess,totalCost,RDReference,excuteCost,shippingCost,testingCost,profit,exchangeRate,tradeTerm,quoteDue,quoteUSDY,quoteUSDM,quoteTWDY,quoteTWDM,costTWDKG,costUSDKG,costUSDY) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
-  db.query(
-    queryInsertNew,
-    [
-      authur,
-      team,
-      createDate,
-      lastRevise,
-      state,
-      fabricSpecString,
-      clientId,
-      fabricItem,
-      description,
-      width,
-      gsm,
-      gy,
-      brand,
-      machineType,
-      machineSpec,
-      other,
-      densityWarp,
-      densityWeft,
-      fabricProcessFee,
-      fabricCost,
-      totalWastage,
-      totalYarnCost,
-      portionText,
-      yarnTextString,
-      dyeAverageCost,
-      process,
-      specialProcess,
-      totalCost,
-      RDReference,
-      excuteCost,
-      shippingCost,
-      testingCost,
-      profit,
-      exchangeRate,
-      tradeTerm,
-      quoteDueDate,
-      quoteUSDY,
-      quoteUSDM,
-      quoteTWDY,
-      quoteTWDM,
-      costTWDKG,
-      costUSDKG,
-      costUSDY,
-    ],
-    (error, results) => {
-      if (error) {
-        console.error('執行插入查詢時發生錯誤：' + error.stack);
-        res.status(500).send('內部伺服器錯誤');
-        return;
-      }
-      console.log('插入查詢成功執行');
-      // 在數據庫操作完成後發送回應
-      res.status(200).json({ message: '數據傳遞成功' });
+  const columnValues = {
+    userId: authur,
+    team: team,
+    createDate: createDate,
+    lastRevise: lastRevise,
+    state: state,
+    fabricSpecStr: fabricSpecString,
+    clientId: clientId,
+    fabricItem: fabricItem,
+    description: description,
+    width: width,
+    gsm: gsm,
+    gy: gy,
+    brand: brand,
+    machineType: machineType,
+    machineSpec: machineSpec,
+    other: other,
+    densityWarp: densityWarp,
+    densityWeft: densityWeft,
+    fabricProcessFee: fabricProcessFee,
+    fabricCost: fabricCost,
+    totalWastage: totalWastage,
+    totalYarnCost: totalYarnCost,
+    portionText: portionText,
+    yarnTextStr: yarnTextString,
+    dyeCost: dyeAverageCost,
+    process: JSON.stringify(process),
+    specialProcess: JSON.stringify(specialProcess),
+    totalCost: totalCost,
+    RDReference: RDReference,
+    excuteCost: excuteCost,
+    shippingCost: shippingCost,
+    testingCost: testingCost,
+    profit: profit,
+    exchangeRate: exchangeRate,
+    tradeTerm: tradeTerm,
+    quoteDue: quoteDueDate,
+    quoteUSDY: quoteUSDY,
+    quoteUSDM: quoteUSDM,
+    quoteTWDY: quoteTWDY,
+    quoteTWDM: quoteTWDM,
+    costTWDKG: costTWDKG,
+    costUSDKG: costUSDKG,
+    costUSDY: costUSDY,
+    yarnInfoList: JSON.stringify(yarnInfo),
+  };
+  console.log(columnValues, 'v');
+  const columns = Object.keys(columnValues).join(',');
+  console.log(Object.keys(columnValues));
+  const values = Object.values(columnValues);
+  const placeholders = values.map(() => '?').join(',');
+  const queryInsertNew = `INSERT INTO quotationList (${columns}) VALUES (${placeholders})`;
+  console.log(values);
+  db.query(queryInsertNew, values, (error, results) => {
+    if (error) {
+      console.error('執行插入查詢時發生錯誤：' + error.stack);
+      res.status(500).send('內部伺服器錯誤');
+      return;
     }
-  );
+    console.log('插入查詢成功執行');
+    // 在數據庫操作完成後發送回應
+    res.status(200).json({ message: '數據傳遞成功' });
+  });
+  console.log(yarnInfo);
 });
 app.post('/api/todoList', (req, res) => {
   const { todos } = req.body;
