@@ -406,8 +406,7 @@ app.post('/api/quotationAdd', (req, res) => {
   const { quote } = req.body;
   console.log(quote, 'qqq');
   let {
-    authur,
-    team,
+    userId,
     createDate,
     lastRevise,
     state,
@@ -419,7 +418,7 @@ app.post('/api/quotationAdd', (req, res) => {
       gsm,
       gy,
       brand,
-      fabricSpecString,
+      fabricSpecStr,
     },
     yarnCost: {
       machineType,
@@ -432,8 +431,8 @@ app.post('/api/quotationAdd', (req, res) => {
       totalWastage,
       totalYarnCost,
       portionText,
-      yarnTextString,
-      yarnInfo, //TBA
+      yarnTextStr,
+      yarnInfoList, //TBA
     },
     salesCost: {
       excuteCost,
@@ -460,12 +459,12 @@ app.post('/api/quotationAdd', (req, res) => {
     },
   } = quote;
   const columnValues = {
-    userId: authur,
-    team: team,
+    userId: userId,
+    team: 1,
     createDate: createDate,
     lastRevise: lastRevise,
     state: state,
-    fabricSpecStr: fabricSpecString,
+    fabricSpecStr: fabricSpecStr,
     clientId: clientId,
     fabricItem: fabricItem,
     description: description,
@@ -483,7 +482,7 @@ app.post('/api/quotationAdd', (req, res) => {
     totalWastage: totalWastage,
     totalYarnCost: totalYarnCost,
     portionText: portionText,
-    yarnTextStr: yarnTextString,
+    yarnTextStr: yarnTextStr,
     dyeCost: dyeAverageCost,
     process: JSON.stringify(process),
     specialProcess: JSON.stringify(specialProcess),
@@ -503,7 +502,7 @@ app.post('/api/quotationAdd', (req, res) => {
     costTWDKG: costTWDKG,
     costUSDKG: costUSDKG,
     costUSDY: costUSDY,
-    yarnInfoList: JSON.stringify(yarnInfo),
+    yarnInfoList: JSON.stringify(yarnInfoList),
   };
   console.log(columnValues, 'v');
   const columns = Object.keys(columnValues).join(',');
@@ -522,7 +521,6 @@ app.post('/api/quotationAdd', (req, res) => {
     // 在數據庫操作完成後發送回應
     res.status(200).json({ message: '數據傳遞成功' });
   });
-  console.log(yarnInfo);
 });
 app.post('/api/todoList', (req, res) => {
   const { todos } = req.body;
