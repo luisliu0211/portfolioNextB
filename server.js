@@ -71,7 +71,6 @@ app.use((req, res, next) => {
 
   next();
 });
-// app.use(cors());
 // 開啟 CORS
 app.use('/uploads', express.static('uploads'));
 app.use('/public', express.static('public'));
@@ -82,7 +81,7 @@ const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  database: process.env.DB_DATABASE,
   port: process.env.DB_PORT,
 });
 
@@ -243,6 +242,7 @@ app.get('/api/json/readFile', (req, res) => {
         const jsonData = JSON.parse(data);
         res.json(jsonData);
       } catch (parseError) {
+        console.error('Error parsing JSON data:', parseError);
         res.status(500).json({ error: 'Error parsing JSON data' });
       }
     }
