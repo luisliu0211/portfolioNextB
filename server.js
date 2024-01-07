@@ -6,26 +6,40 @@ const matter = require('gray-matter');
 const path = require('path');
 const port = 8080;
 const fs = require('fs');
+const fs_promises = require('fs/promises');
 const app = express();
 const { v4: uuidv4 } = require('uuid');
-// 上傳照片用的套 multer
+// 上傳用的套 multer
 const multer = require('multer');
 const cookieParser = require('cookie-parser');
+
+const MarkdownIt = require('markdown-it');
+const md = new MarkdownIt();
+
 // 設定 Multer 存入的空間
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // 指定存儲的目錄
-  },
-  filename: function (req, file, cb) {
-    // 使用原始檔名，但避免名稱冲突
-    const uniqueFilename = `${uuidv4()}.jpg`;
-    cb(null, uniqueFilename);
-  },
-});
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     cb(null, 'uploadsImages/'); // 指定存儲的目錄
+//   },
+//   filename: function (req, file, cb) {
+//     // 使用原始檔名，但避免名稱冲突
+//     const uniqueFilename = `${uuidv4()}.jpg`;
+//     cb(null, uniqueFilename);
+//   },
+// });
 
 // 設定 Multer
-const upload = multer({
-  storage: storage,
+const uploadImage = multer({
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, 'uploadsImages/'); // 指定存儲的目錄
+    },
+    filename: function (req, file, cb) {
+      // 使用原始檔名，但避免名稱冲突
+      const uniqueFilename = `${uuidv4()}.jpg`;
+      cb(null, uniqueFilename);
+    },
+  }),
   limits: {
     fileSize: Infinity,
   },
@@ -72,7 +86,8 @@ app.use((req, res, next) => {
   next();
 });
 // 開啟 CORS
-app.use('/uploads', express.static('uploads'));
+app.use('/uploadsImages', express.static('uploadsImages'));
+app.use('/uploadsMarkdown', express.static('uploadsMarkdown'));
 app.use('/public', express.static('public'));
 // 创建 Express 应用
 require('dotenv').config();
@@ -84,7 +99,6 @@ const db = mysql.createConnection({
   database: process.env.DB_DATABASE,
   port: process.env.DB_PORT,
 });
-
 db.connect((err) => {
   if (err) {
     console.error('Database connection failed: ' + err.stack);
@@ -185,6 +199,66 @@ app.get('/api/skills', (req, res) => {
     // 将查询结果发送给前端
   });
 });
+// 验证文件类型为Markdown
+const markdownfileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === 'text/markdown' ||
+    file.mimetype === 'application/octet-stream'
+  ) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only Markdown files are allowed'), false);
+  }
+};
+const uploadMarkdown = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: markdownfileFilter,
+});
+// 前端上傳md黨存到後端
+app.post(
+  '/api/posts/markDown',
+  uploadMarkdown.single('file'),
+  async (req, res) => {
+    try {
+      const markdownBuffer = req.file.buffer;
+      const markdownContent = markdownBuffer.toString('utf-8');
+      const uploadFolderPath = path.join(__dirname, 'uploadsMd');
+      const fileName = `markdown_${Date.now()}.md`;
+      const filePath = path.join(uploadFolderPath, fileName);
+      // 使用 markdown-it 将 Markdown 转换为 HTML
+      const htmlContent = md.render(markdownContent);
+      const savedHtmlContent = htmlContent.toString();
+      // console.log(savedHtmlContent, 'ss');
+
+      // 确保文件夹存在，如果不存在则创建
+      if (!fs.existsSync(uploadFolderPath)) {
+        fs.mkdirSync(uploadFolderPath, { recursive: true });
+      }
+
+      // 写入文件
+      fs.writeFileSync(filePath, markdownContent);
+
+      // 将HTML内容保存到文件或数据库，这里只是简单地打印出来
+      // console.log(savedHtmlContent);
+
+      res.status(200).json({ success: true, htmlContent: savedHtmlContent });
+    } catch (error) {
+      console.error('Error processing file:', error);
+      res.status(500).json({ success: false, error: 'Error processing file' });
+    }
+  }
+);
+// 取得後端的md靜態欓 渲染到前端
+app.get('/api/posts/markdown', async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, 'uploadsMd', 'markdowntest.md');
+    const markdownContent = await fs_promises.readFile(filePath, 'utf-8');
+    res.json({ markdownContent: markdownContent });
+  } catch (error) {
+    console.error('Error reading Markdown file:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 app.post('/api/saveLoginData', (req, res) => {
   const { name, email, password } = req.body;
   // TODO: 檢查email是否重複 有重複返回 該信箱已註冊的提示
@@ -271,14 +345,13 @@ app.put('/api/user/update', (req, res) => {
 });
 // TODO: 上傳檔案
 // 處理圖片上傳請求
-app.post('/api/upload', upload.single('image'), (req, res) => {
+app.post('/api/uploadImages', uploadImage.single('image'), (req, res) => {
   try {
     if (!req.file) {
       throw new Error('No image provided');
     }
-
     // 在 req.file 中可以獲取上傳的文件信息
-    const filePath = path.join(__dirname, 'uploads', req.file.filename);
+    const filePath = path.join(__dirname, 'uploadsImages', req.file.filename);
 
     // 可以在這裡進行進一步的處理，例如將檔案路徑存入資料庫
 
@@ -316,7 +389,6 @@ app.get('/api/quotes/:id', (req, res) => {
 app.get('/api/posts/:id', (req, res) => {
   // 执行数据库查询
   const postId = req.params.id;
-  console.log(postId);
   console.log('Received API request');
   db.query(
     'SELECT * FROM post_Detail WHERE id=?',
@@ -543,7 +615,7 @@ app.post('/api/todoList', (req, res) => {
 });
 ///=====//
 app.get('/api/posts', (req, res) => {
-  // console.log('filter:', req.query);
+  console.log('filter:', req.query);
   const {
     order,
     dateRangeFrom,
@@ -582,7 +654,7 @@ app.get('/api/posts', (req, res) => {
   if (order) {
     sqlQuery += ` ORDER BY create_date ${order}`;
   }
-
+  console.log(sqlQuery);
   db.query(sqlQuery, (error, results) => {
     if (error) {
       console.error('查詢時發生錯誤: ' + error.stack);
@@ -598,8 +670,45 @@ app.get('/api/posts', (req, res) => {
     // 將查詢結果發送給前端
   });
 });
-
-//======//
+app.post('/api/posts', (req, res) => {
+  console.log(req.body, 'r');
+  let {
+    title,
+    subTitle,
+    coverImg,
+    category,
+    excerpt,
+    create_date,
+    tags,
+    content,
+    contentType,
+  } = req.body;
+  console.log(
+    title,
+    subTitle,
+    category,
+    coverImg,
+    excerpt,
+    create_date,
+    tags,
+    content,
+    contentType
+  );
+  // db.query(
+  //   'INSERT INTO posts (title,subtitle,coverImage,excerpt,create_date,category,tags,content,contentType) VALUES (?,?,?,?)',
+  //   [title, subTitle,coverImg,excerpt,create_date,category,tags,'content','markdown'],
+  //   (error, results) => {
+  //     if (error) {
+  //       console.error('Error executing query: ' + error.stack);
+  //       res.status(500).send('Internal Server Error');
+  //       return;
+  //     }
+  //     // console.log('Query executed successfully');
+  //     res.json(results);
+  //     // 将查询结果发送给前端
+  //   }
+  // );
+});
 
 // 启动 Express 应用
 const PORT = process.env.PORT || port;
