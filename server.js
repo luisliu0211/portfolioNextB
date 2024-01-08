@@ -216,83 +216,83 @@ const uploadMarkdown = multer({
   fileFilter: markdownfileFilter,
 });
 // 前端上傳md黨存到後端
-app.post(
-  '/api/posts/markDown',
-  uploadMarkdown.single('file'),
-  async (req, res) => {
-    try {
-      const {
-        title,
-        subTitle,
-        category,
-        tags,
-        contentType,
-        coverImg,
-        create_date,
-      } = JSON.parse(req.body.postDetail);
-      const markdownBuffer = req.file.buffer;
+// app.post(
+//   '/api/posts/markDown',
+//   uploadMarkdown.single('file'),
+//   async (req, res) => {
+//     try {
+//       const {
+//         title,
+//         subTitle,
+//         category,
+//         tags,
+//         contentType,
+//         coverImg,
+//         create_date,
+//       } = JSON.parse(req.body.postDetail);
+//       const markdownBuffer = req.file.buffer;
 
-      console.log(title, subTitle, category, JSON.stringify(tags), contentType);
-      const markdownContent = markdownBuffer.toString('utf-8');
-      // const uploadFolderPath = path.join(__dirname, 'uploadsMd');
-      // const fileName = `markdown_${Date.now()}.md`;
-      // const filePath = path.join(uploadFolderPath, fileName);
-      // 使用 markdown-it 将 Markdown 转换为 HTML
-      const htmlContent = md.render(markdownContent);
-      const savedHtmlContent = htmlContent.toString();
-      // console.log(savedHtmlContent, '轉成html標籤字串');
-      // console.log(htmlContent, '轉成html');
-      // console.log(markdownContent, '直接存成markdown格式');
-      // console.log(markdownBuffer, 'buttfr 2進位檔案');
-      const sql =
-        'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,?)';
+//       console.log(title, subTitle, category, JSON.stringify(tags), contentType);
+//       const markdownContent = markdownBuffer.toString('utf-8');
+//       // const uploadFolderPath = path.join(__dirname, 'uploadsMd');
+//       // const fileName = `markdown_${Date.now()}.md`;
+//       // const filePath = path.join(uploadFolderPath, fileName);
+//       // 使用 markdown-it 将 Markdown 转换为 HTML
+//       const htmlContent = md.render(markdownContent);
+//       const savedHtmlContent = htmlContent.toString();
+//       // console.log(savedHtmlContent, '轉成html標籤字串');
+//       // console.log(htmlContent, '轉成html');
+//       // console.log(markdownContent, '直接存成markdown格式');
+//       // console.log(markdownBuffer, 'buttfr 2進位檔案');
+//       const sql =
+//         'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,?)';
 
-      db.query(
-        sql,
-        [
-          title,
-          subTitle,
-          category,
-          JSON.stringify(tags),
-          markdownContent,
-          contentType,
-          coverImg,
-          create_date,
-          1,
-        ],
-        (err, result) => {
-          if (err) {
-            console.error('Error storing data in MySQL:', err);
-            res
-              .status(500)
-              .json({ success: false, error: 'Error storing data' });
-          } else {
-            console.log('Data stored in MySQL:', result);
-            res
-              .status(200)
-              .json({ success: true, htmlContent: markdownContent });
-          }
-        }
-      );
+//       db.query(
+//         sql,
+//         [
+//           title,
+//           subTitle,
+//           category,
+//           JSON.stringify(tags),
+//           markdownContent,
+//           contentType,
+//           coverImg,
+//           create_date,
+//           1,
+//         ],
+//         (err, result) => {
+//           if (err) {
+//             console.error('Error storing data in MySQL:', err);
+//             res
+//               .status(500)
+//               .json({ success: false, error: 'Error storing data' });
+//           } else {
+//             console.log('Data stored in MySQL:', result);
+//             res
+//               .status(200)
+//               .json({ success: true, htmlContent: markdownContent });
+//           }
+//         }
+//       );
 
-      // // 确保文件夹存在，如果不存在则创建
-      // if (!fs.existsSync(uploadFolderPath)) {
-      //   fs.mkdirSync(uploadFolderPath, { recursive: true });
-      // }
+//       // // 确保文件夹存在，如果不存在则创建
+//       // if (!fs.existsSync(uploadFolderPath)) {
+//       //   fs.mkdirSync(uploadFolderPath, { recursive: true });
+//       // }
 
-      // // 写入文件
-      // fs.writeFileSync(filePath, markdownContent);
+//       // // 写入文件
+//       // fs.writeFileSync(filePath, markdownContent);
 
-      // // 将HTML内容保存到文件或数据库，这里只是简单地打印出来
-      console.log(savedHtmlContent);
+//       // // 将HTML内容保存到文件或数据库，这里只是简单地打印出来
+//       console.log(savedHtmlContent);
 
-      // res.status(200).json({ success: true, htmlContent: savedHtmlContent });
-    } catch (error) {
-      console.error('Error processing file:', error);
-      res.status(500).json({ success: false, error: 'Error processing file' });
-    }
-  }
-);
+//       // res.status(200).json({ success: true, htmlContent: savedHtmlContent });
+//     } catch (error) {
+//       console.error('Error processing file:', error);
+//       res.status(500).json({ success: false, error: 'Error processing file' });
+//     }
+//   }
+// );
 // 取得後端的md靜態欓 渲染到前端
 app.get('/api/posts/markdown', async (req, res) => {
   try {
@@ -445,7 +445,6 @@ app.get('/api/posts/:id', (req, res) => {
         res.status(500).send('Internal Server Error');
         return;
       }
-      console.log(results, 'rr');
       // console.log('Query executed successfully');
       res.json(results);
       // 将查询结果发送给前端
@@ -705,50 +704,63 @@ app.get('/api/posts', (req, res) => {
     // 將查詢結果發送給前端
   });
 });
-app.post('/api/posts', (req, res) => {
-  let {
-    title,
-    subTitle,
-    coverImg,
-    category,
-    create_date,
-    tags,
-    content,
-    contentType,
-  } = req.body;
-  console.log(
-    title,
-    subTitle,
-    category,
-    coverImg,
-    create_date,
-    tags,
-    content,
-    contentType
-  );
-  // db.query(
-  //   'INSERT INTO posts (title,subtitle,coverImage,create_date,category,tags,content,contentType) VALUES (?,?,?,?,?,?,?,?)',
-  //   [
-  //     title,
-  //     subTitle,
-  //     coverImg,
-  //     create_date,
-  //     category,
-  //     tags,
-  //     'content',
-  //     'markdown',
-  //   ],
-  //   (error, results) => {
-  //     if (error) {
-  //       console.error('Error executing query: ' + error.stack);
-  //       res.status(500).send('Internal Server Error');
-  //       return;
-  //     }
-  //     // console.log('Query executed successfully');
-  //     res.json(results);
-  //     // 将查询结果发送给前端
-  //   }
-  // );
+app.post('/api/posts', uploadMarkdown.single('file'), (req, res) => {
+  async (req, res) => {
+    try {
+      const {
+        title,
+        subTitle,
+        category,
+        tags,
+        contentType,
+        coverImg,
+        create_date,
+      } = JSON.parse(req.body.postDetail);
+      const markdownBuffer = req.file.buffer;
+      console.log(title, subTitle, category, JSON.stringify(tags), contentType);
+      const markdownContent = markdownBuffer.toString('utf-8');
+      // 使用 markdown-it 将 Markdown 转换为 HTML
+      const htmlContent = md.render(markdownContent);
+      const savedHtmlContent = htmlContent.toString();
+      // console.log(savedHtmlContent, '轉成html標籤字串');
+      // console.log(htmlContent, '轉成html');
+      // console.log(markdownContent, '直接存成markdown格式');
+      // console.log(markdownBuffer, 'buttfr 2進位檔案');
+      const sql =
+        'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,?)';
+      db.query(
+        sql,
+        [
+          title,
+          subTitle,
+          category,
+          JSON.stringify(tags),
+          markdownContent,
+          contentType,
+          coverImg,
+          create_date,
+          1,
+        ],
+        (err, result) => {
+          if (err) {
+            console.error('Error storing data in MySQL:', err);
+            res
+              .status(500)
+              .json({ success: false, error: 'Error storing data' });
+          } else {
+            console.log('Data stored in MySQL:', result);
+            res
+              .status(200)
+              .json({ success: true, htmlContent: markdownContent });
+          }
+        }
+      );
+      console.log(savedHtmlContent);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      res.status(500).json({ success: false, error: 'Error processing file' });
+    }
+  };
 });
 
 // 启动 Express 应用
