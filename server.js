@@ -762,6 +762,59 @@ app.post('/api/posts', uploadMarkdown.single('file'), (req, res) => {
     }
   };
 });
+app.post('/api/posts/edit', (req, res) => {
+  try {
+    console.log(req.body);
+    const {
+      title,
+      subTitle,
+      category,
+      tags,
+      contentType,
+      coverImg,
+      content,
+      create_date,
+    } = req.body;
+    console.log(
+      title,
+      subTitle,
+      category,
+      tags,
+      contentType,
+      coverImg,
+      create_date,
+      content
+    );
+    const sql =
+      'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,1)';
+    db.query(
+      sql,
+      [
+        title,
+        subTitle,
+        category,
+        JSON.stringify(tags),
+        content,
+        contentType,
+        coverImg,
+        create_date,
+        1,
+      ],
+      (err, result) => {
+        if (err) {
+          console.error('Error storing data in MySQL:', err);
+          res.status(500).json({ success: false, error: 'Error storing data' });
+        } else {
+          console.log('Data stored in MySQL:', result);
+          res.status(200).json({ success: true, htmlContent: content });
+        }
+      }
+    );
+  } catch (err) {
+    console.error('Error processing file:', err);
+    res.status(500).json({ success: false, err: 'Error processing file' });
+  }
+});
 
 // 启动 Express 应用
 const PORT = process.env.PORT || port;
