@@ -245,7 +245,7 @@ app.post(
       // console.log(markdownContent, '直接存成markdown格式');
       // console.log(markdownBuffer, 'buttfr 2進位檔案');
       const sql =
-        'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date) VALUES (?, ?, ?, ?, ?, ? ,? ,?)';
+        'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,?)';
 
       db.query(
         sql,
@@ -258,6 +258,7 @@ app.post(
           contentType,
           coverImg,
           create_date,
+          1,
         ],
         (err, result) => {
           if (err) {
@@ -670,26 +671,19 @@ app.get('/api/posts', (req, res) => {
   console.log(tagsArray);
   // 构建 SQL 查询语句
   let sqlQuery = 'SELECT * FROM posts WHERE 1 = 1';
-
   if (dateRangeFrom) {
     sqlQuery += ` AND create_date >= '${dateRangeFrom}'`;
   }
-
   if (dateRangeTo) {
     sqlQuery += ` AND create_date <= '${dateRangeTo}'`;
   }
-  //  添加筛选条件
-
   if (category) {
     sqlQuery += ` AND category = '${category}'`;
   }
-
   if (keywordSearch) {
     sqlQuery += ` AND TRIM(title) LIKE '%${keywordSearch}%'`;
   }
-
   if (tagsArray.length > 0) {
-    console.log('?', tagsArray);
     sqlQuery += `AND JSON_CONTAINS(tags, '${JSON.stringify(tagsArray)}') = 1`;
   }
   if (order) {
