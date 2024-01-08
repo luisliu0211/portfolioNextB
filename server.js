@@ -210,8 +210,9 @@ const markdownfileFilter = (req, file, cb) => {
     cb(new Error('Only Markdown files are allowed'), false);
   }
 };
+const storage = multer.memoryStorage();
 const uploadMarkdown = multer({
-  storage: multer.memoryStorage(),
+  storage: storage,
   fileFilter: markdownfileFilter,
 });
 // 前端上傳md黨存到後端
@@ -220,28 +221,71 @@ app.post(
   uploadMarkdown.single('file'),
   async (req, res) => {
     try {
+      const {
+        title,
+        subTitle,
+        category,
+        tags,
+        contentType,
+        coverImg,
+        create_date,
+      } = JSON.parse(req.body.postDetail);
       const markdownBuffer = req.file.buffer;
+
+      console.log(title, subTitle, category, JSON.stringify(tags), contentType);
       const markdownContent = markdownBuffer.toString('utf-8');
-      const uploadFolderPath = path.join(__dirname, 'uploadsMd');
-      const fileName = `markdown_${Date.now()}.md`;
-      const filePath = path.join(uploadFolderPath, fileName);
+      // const uploadFolderPath = path.join(__dirname, 'uploadsMd');
+      // const fileName = `markdown_${Date.now()}.md`;
+      // const filePath = path.join(uploadFolderPath, fileName);
       // 使用 markdown-it 将 Markdown 转换为 HTML
       const htmlContent = md.render(markdownContent);
       const savedHtmlContent = htmlContent.toString();
-      // console.log(savedHtmlContent, 'ss');
+      // console.log(savedHtmlContent, '轉成html標籤字串');
+      // console.log(htmlContent, '轉成html');
+      // console.log(markdownContent, '直接存成markdown格式');
+      // console.log(markdownBuffer, 'buttfr 2進位檔案');
+      const sql =
+        'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date) VALUES (?, ?, ?, ?, ?, ? ,? ,?)';
 
-      // 确保文件夹存在，如果不存在则创建
-      if (!fs.existsSync(uploadFolderPath)) {
-        fs.mkdirSync(uploadFolderPath, { recursive: true });
-      }
+      db.query(
+        sql,
+        [
+          title,
+          subTitle,
+          category,
+          JSON.stringify(tags),
+          markdownContent,
+          contentType,
+          coverImg,
+          create_date,
+        ],
+        (err, result) => {
+          if (err) {
+            console.error('Error storing data in MySQL:', err);
+            res
+              .status(500)
+              .json({ success: false, error: 'Error storing data' });
+          } else {
+            console.log('Data stored in MySQL:', result);
+            res
+              .status(200)
+              .json({ success: true, htmlContent: markdownContent });
+          }
+        }
+      );
 
-      // 写入文件
-      fs.writeFileSync(filePath, markdownContent);
+      // // 确保文件夹存在，如果不存在则创建
+      // if (!fs.existsSync(uploadFolderPath)) {
+      //   fs.mkdirSync(uploadFolderPath, { recursive: true });
+      // }
 
-      // 将HTML内容保存到文件或数据库，这里只是简单地打印出来
-      // console.log(savedHtmlContent);
+      // // 写入文件
+      // fs.writeFileSync(filePath, markdownContent);
 
-      res.status(200).json({ success: true, htmlContent: savedHtmlContent });
+      // // 将HTML内容保存到文件或数据库，这里只是简单地打印出来
+      console.log(savedHtmlContent);
+
+      // res.status(200).json({ success: true, htmlContent: savedHtmlContent });
     } catch (error) {
       console.error('Error processing file:', error);
       res.status(500).json({ success: false, error: 'Error processing file' });
@@ -253,6 +297,7 @@ app.get('/api/posts/markdown', async (req, res) => {
   try {
     const filePath = path.join(__dirname, 'uploadsMd', 'markdowntest.md');
     const markdownContent = await fs_promises.readFile(filePath, 'utf-8');
+    console.log(markdownContent);
     res.json({ markdownContent: markdownContent });
   } catch (error) {
     console.error('Error reading Markdown file:', error);
@@ -343,22 +388,21 @@ app.put('/api/user/update', (req, res) => {
   // 在這裡執行更新數據到數據庫的邏輯
   // 這裡的邏輯應該根據你的數據庫結構進行修改
 });
-// TODO: 上傳檔案
-// 處理圖片上傳請求
-app.post('/api/uploadImages', uploadImage.single('image'), (req, res) => {
+// TODO: 上傳圖片預覽檔案
+//uploadImage.single('image')
+app.post('/api/uploadImages', (req, res) => {
   try {
     if (!req.file) {
       throw new Error('No image provided');
     }
     // 在 req.file 中可以獲取上傳的文件信息
     const filePath = path.join(__dirname, 'uploadsImages', req.file.filename);
-
     // 可以在這裡進行進一步的處理，例如將檔案路徑存入資料庫
 
     res.status(200).json({
       message: 'Image uploaded successfully',
-      uniqueFilename: req.file.filename, //
-      filePath: filePath,
+      // uniqueFilename: req.file.filename, //
+      // filePath: filePath,
     });
   } catch (error) {
     console.error('Error uploading image:', error.message);
@@ -389,9 +433,10 @@ app.get('/api/quotes/:id', (req, res) => {
 app.get('/api/posts/:id', (req, res) => {
   // 执行数据库查询
   const postId = req.params.id;
+  console.log(postId, 'postID');
   console.log('Received API request');
   db.query(
-    'SELECT * FROM post_Detail WHERE id=?',
+    'SELECT * FROM posts WHERE id=?',
     [postId],
     (error, results, fields) => {
       if (error) {
@@ -616,18 +661,13 @@ app.post('/api/todoList', (req, res) => {
 ///=====//
 app.get('/api/posts', (req, res) => {
   console.log('filter:', req.query);
-  const {
-    order,
-    dateRangeFrom,
-    dateRangeTo,
-    category,
-    keywordSearch,
-    tags,
-    page,
-  } = req.query;
-  // console.log(tags);
+  const { order, dateRangeFrom, dateRangeTo, category, keywordSearch, tags } =
+    req.query;
+  console.log(tags);
   // tags切換為陣列
   const tagsArray = tags ? tags.split(',') : [];
+  // console.log(tagsArray.join(','), 'a');
+  console.log(tagsArray);
   // 构建 SQL 查询语句
   let sqlQuery = 'SELECT * FROM posts WHERE 1 = 1';
 
@@ -638,7 +678,7 @@ app.get('/api/posts', (req, res) => {
   if (dateRangeTo) {
     sqlQuery += ` AND create_date <= '${dateRangeTo}'`;
   }
-  // 添加筛选条件
+  //  添加筛选条件
 
   if (category) {
     sqlQuery += ` AND category = '${category}'`;
@@ -649,7 +689,8 @@ app.get('/api/posts', (req, res) => {
   }
 
   if (tagsArray.length > 0) {
-    sqlQuery += ` AND tags IN ('${tagsArray.join("','")}')`;
+    console.log('?', tagsArray);
+    sqlQuery += `AND JSON_CONTAINS(tags, '${JSON.stringify(tagsArray)}') = 1`;
   }
   if (order) {
     sqlQuery += ` ORDER BY create_date ${order}`;
@@ -671,13 +712,11 @@ app.get('/api/posts', (req, res) => {
   });
 });
 app.post('/api/posts', (req, res) => {
-  console.log(req.body, 'r');
   let {
     title,
     subTitle,
     coverImg,
     category,
-    excerpt,
     create_date,
     tags,
     content,
@@ -688,15 +727,23 @@ app.post('/api/posts', (req, res) => {
     subTitle,
     category,
     coverImg,
-    excerpt,
     create_date,
     tags,
     content,
     contentType
   );
   // db.query(
-  //   'INSERT INTO posts (title,subtitle,coverImage,excerpt,create_date,category,tags,content,contentType) VALUES (?,?,?,?)',
-  //   [title, subTitle,coverImg,excerpt,create_date,category,tags,'content','markdown'],
+  //   'INSERT INTO posts (title,subtitle,coverImage,create_date,category,tags,content,contentType) VALUES (?,?,?,?,?,?,?,?)',
+  //   [
+  //     title,
+  //     subTitle,
+  //     coverImg,
+  //     create_date,
+  //     category,
+  //     tags,
+  //     'content',
+  //     'markdown',
+  //   ],
   //   (error, results) => {
   //     if (error) {
   //       console.error('Error executing query: ' + error.stack);
