@@ -774,6 +774,7 @@ app.post('/api/posts/edit', (req, res) => {
       coverImg,
       content,
       create_date,
+      coverB64,
     } = req.body;
     console.log(
       title,
@@ -783,7 +784,8 @@ app.post('/api/posts/edit', (req, res) => {
       contentType,
       coverImg,
       create_date,
-      content
+      content,
+      coverB64
     );
     const sql =
       'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,1)';
