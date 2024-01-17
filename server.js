@@ -432,6 +432,7 @@ app.get('/api/quotes/:id', (req, res) => {
 app.get('/api/posts/:id', (req, res) => {
   // 执行数据库查询
   const postId = req.params.id;
+
   console.log(postId, 'postID');
   console.log('Received API request');
   db.query(
@@ -702,8 +703,11 @@ app.get('/api/posts', (req, res) => {
     // 將查詢結果發送給前端
   });
 });
-app.post('/api/posts', uploadMarkdown.single('file'), (req, res) => {
+app.post(
+  '/api/posts/mdFile',
+  uploadMarkdown.single('file'),
   async (req, res) => {
+    console.log('inin', req.body);
     try {
       const {
         title,
@@ -715,12 +719,12 @@ app.post('/api/posts', uploadMarkdown.single('file'), (req, res) => {
         create_date,
       } = JSON.parse(req.body.postDetail);
       const markdownBuffer = req.file.buffer;
-      console.log(title, subTitle, category, JSON.stringify(tags), contentType);
+      console.log(markdownBuffer, 'bb');
       const markdownContent = markdownBuffer.toString('utf-8');
       // 使用 markdown-it 将 Markdown 转换为 HTML
       const htmlContent = md.render(markdownContent);
       const savedHtmlContent = htmlContent.toString();
-      // console.log(savedHtmlContent, '轉成html標籤字串');
+      console.log(savedHtmlContent, '轉成html標籤字串');
       // console.log(htmlContent, '轉成html');
       // console.log(markdownContent, '直接存成markdown格式');
       // console.log(markdownBuffer, 'buttfr 2進位檔案');
@@ -758,9 +762,9 @@ app.post('/api/posts', uploadMarkdown.single('file'), (req, res) => {
       console.error('Error processing file:', error);
       res.status(500).json({ success: false, error: 'Error processing file' });
     }
-  };
-});
-app.post('/api/posts/edit', (req, res) => {
+  }
+);
+app.post('/api/posts', (req, res) => {
   try {
     console.log(req.body);
     const {
