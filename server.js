@@ -703,11 +703,105 @@ app.get('/api/posts', (req, res) => {
     // 將查詢結果發送給前端
   });
 });
-app.post(
-  '/api/posts/mdFile',
-  uploadMarkdown.single('file'),
-  async (req, res) => {
-    console.log('inin', req.body);
+app.post('/api/mdFile', uploadMarkdown.single('file'), async (req, res) => {
+  try {
+    const {
+      title,
+      subTitle,
+      category,
+      tags,
+      contentType,
+      coverImg,
+      create_date,
+    } = JSON.parse(req.body.postDetail);
+    const markdownBuffer = req.file.buffer;
+    console.log(markdownBuffer, 'bb');
+    const markdownContent = markdownBuffer.toString('utf-8');
+    // 使用 markdown-it 将 Markdown 转换为 HTML
+    const htmlContent = md.render(markdownContent);
+    const savedHtmlContent = htmlContent.toString();
+    console.log(savedHtmlContent, '轉成html標籤字串');
+    // console.log(htmlContent, '轉成html');
+    // console.log(markdownContent, '直接存成markdown格式');
+    // console.log(markdownBuffer, 'buttfr 2進位檔案');
+    const sql =
+      'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,?)';
+    db.query(
+      sql,
+      [
+        title,
+        subTitle,
+        category,
+        JSON.stringify(tags),
+        markdownContent,
+        contentType,
+        coverImg,
+        create_date,
+        1,
+      ],
+      (err, result) => {
+        if (err) {
+          console.error('Error storing data in MySQL:', err);
+          res.status(500).json({ success: false, error: 'Error storing data' });
+        } else {
+          console.log('Data stored in MySQL:', result);
+          res.status(200).json({ success: true, htmlContent: markdownContent });
+        }
+      }
+    );
+    console.log(savedHtmlContent);
+  } catch (error) {
+    console.error('Error processing file:', error);
+    res.status(500).json({ success: false, error: 'Error processing file' });
+  }
+});
+app.post('/api/posts', (req, res) => {
+  console.log(req.body.id);
+  if (req.body.id !== undefined) {
+    console.log('有資料');
+    try {
+      const {
+        id,
+        title,
+        subTitle,
+        category,
+        tags,
+        contentType,
+        coverImg,
+        content,
+        revised_date,
+      } = req.body;
+      const sql = `UPDATE posts SET title=?, subTitle=?, category=?, tags=?, content=?, contentType=?, coverImage=?, revised_date=?,authur=? WHERE id= ${req.body.id}`;
+      db.query(
+        sql,
+        [
+          title,
+          subTitle,
+          category,
+          JSON.stringify(tags),
+          content,
+          contentType,
+          coverImg,
+          revised_date,
+          1,
+        ],
+        (err, result) => {
+          if (err) {
+            console.error('Error storing data in MySQL:', err);
+            res
+              .status(500)
+              .json({ success: false, error: 'Error storing data' });
+          } else {
+            console.log('Data stored in MySQL:', result);
+            res.status(200).json({ success: true, htmlContent: content });
+          }
+        }
+      );
+    } catch (err) {
+      console.error('Error processing file:', err);
+      res.status(500).json({ success: false, err: 'Error processing file' });
+    }
+  } else {
     try {
       const {
         title,
@@ -716,20 +810,22 @@ app.post(
         tags,
         contentType,
         coverImg,
+        content,
         create_date,
-      } = JSON.parse(req.body.postDetail);
-      const markdownBuffer = req.file.buffer;
-      console.log(markdownBuffer, 'bb');
-      const markdownContent = markdownBuffer.toString('utf-8');
-      // 使用 markdown-it 将 Markdown 转换为 HTML
-      const htmlContent = md.render(markdownContent);
-      const savedHtmlContent = htmlContent.toString();
-      console.log(savedHtmlContent, '轉成html標籤字串');
-      // console.log(htmlContent, '轉成html');
-      // console.log(markdownContent, '直接存成markdown格式');
-      // console.log(markdownBuffer, 'buttfr 2進位檔案');
+      } = req.body;
+      // console.log(
+      //   title,
+      //   subTitle,
+      //   category,
+      //   tags,
+      //   contentType,
+      //   coverImg,
+      //   create_date,
+      //   content,
+      //   coverB64
+      // );
       const sql =
-        'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,?)';
+        'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,1)';
       db.query(
         sql,
         [
@@ -737,7 +833,7 @@ app.post(
           subTitle,
           category,
           JSON.stringify(tags),
-          markdownContent,
+          content,
           contentType,
           coverImg,
           create_date,
@@ -751,72 +847,14 @@ app.post(
               .json({ success: false, error: 'Error storing data' });
           } else {
             console.log('Data stored in MySQL:', result);
-            res
-              .status(200)
-              .json({ success: true, htmlContent: markdownContent });
+            res.status(200).json({ success: true, htmlContent: content });
           }
         }
       );
-      console.log(savedHtmlContent);
-    } catch (error) {
-      console.error('Error processing file:', error);
-      res.status(500).json({ success: false, error: 'Error processing file' });
+    } catch (err) {
+      console.error('Error processing file:', err);
+      res.status(500).json({ success: false, err: 'Error processing file' });
     }
-  }
-);
-app.post('/api/posts', (req, res) => {
-  try {
-    console.log(req.body);
-    const {
-      title,
-      subTitle,
-      category,
-      tags,
-      contentType,
-      coverImg,
-      content,
-      create_date,
-      coverB64,
-    } = req.body;
-    console.log(
-      title,
-      subTitle,
-      category,
-      tags,
-      contentType,
-      coverImg,
-      create_date,
-      content,
-      coverB64
-    );
-    const sql =
-      'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,1)';
-    db.query(
-      sql,
-      [
-        title,
-        subTitle,
-        category,
-        JSON.stringify(tags),
-        content,
-        contentType,
-        coverImg,
-        create_date,
-        1,
-      ],
-      (err, result) => {
-        if (err) {
-          console.error('Error storing data in MySQL:', err);
-          res.status(500).json({ success: false, error: 'Error storing data' });
-        } else {
-          console.log('Data stored in MySQL:', result);
-          res.status(200).json({ success: true, htmlContent: content });
-        }
-      }
-    );
-  } catch (err) {
-    console.error('Error processing file:', err);
-    res.status(500).json({ success: false, err: 'Error processing file' });
   }
 });
 
