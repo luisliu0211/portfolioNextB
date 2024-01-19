@@ -711,7 +711,7 @@ app.post('/api/mdFile', uploadMarkdown.single('file'), async (req, res) => {
       category,
       tags,
       contentType,
-      coverImg,
+      coverImage,
       create_date,
     } = JSON.parse(req.body.postDetail);
     const markdownBuffer = req.file.buffer;
@@ -735,7 +735,7 @@ app.post('/api/mdFile', uploadMarkdown.single('file'), async (req, res) => {
         JSON.stringify(tags),
         markdownContent,
         contentType,
-        coverImg,
+        coverImage,
         create_date,
         1,
       ],
@@ -767,11 +767,12 @@ app.post('/api/posts', (req, res) => {
         category,
         tags,
         contentType,
-        coverImg,
+        coverImage,
         content,
         revised_date,
       } = req.body;
-      const sql = `UPDATE posts SET title=?, subTitle=?, category=?, tags=?, content=?, contentType=?, coverImage=?, revised_date=?,authur=? WHERE id= ${req.body.id}`;
+      console.log(coverImage);
+      const sql = `UPDATE posts SET title=?, subTitle=?, category=?, tags=?, content=?, contentType=?, coverImage=?, revised_date=?, authur=? WHERE id= ${id}`;
       db.query(
         sql,
         [
@@ -781,7 +782,7 @@ app.post('/api/posts', (req, res) => {
           JSON.stringify(tags),
           content,
           contentType,
-          coverImg,
+          coverImage,
           revised_date,
           1,
         ],
