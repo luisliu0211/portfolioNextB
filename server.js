@@ -478,7 +478,6 @@ app.get('/api/posts/:id', (req, res) => {
 // });
 app.get('/api/todoList', (req, res) => {
   const querySelect = 'SELECT * FROM todoList where user_id=?';
-
   db.query(querySelect, [1], (err, result) => {
     if (err) {
       console.error('Error executing insert query: ' + err.stack);
@@ -486,6 +485,23 @@ app.get('/api/todoList', (req, res) => {
       return;
     }
     console.log('Insert query executed successfully');
+    res.json(result);
+    // res.status(200).json({ message: 'Data query successfully' });
+  });
+});
+app.patch('/api/todoList/:id', (req, res) => {
+  console.log('tsest');
+
+  const todoId = req.params.id;
+  console.log(todoId, 'id');
+  const querySelect = 'UPDATE todoList SET complete=1 WHERE id=?';
+  db.query(querySelect, [todoId], (err, result) => {
+    if (err) {
+      console.error('Error executing insert query: ' + err.stack);
+      res.status(500).send('Internal Server Error');
+      return;
+    }
+    console.log('todoList complete狀態更新成功');
     res.json(result);
     // res.status(200).json({ message: 'Data query successfully' });
   });
