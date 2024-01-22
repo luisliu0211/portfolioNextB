@@ -826,7 +826,7 @@ app.post('/api/posts', (req, res) => {
         category,
         tags,
         contentType,
-        coverImg,
+        coverImage,
         content,
         create_date,
       } = req.body;
@@ -852,7 +852,7 @@ app.post('/api/posts', (req, res) => {
           JSON.stringify(tags),
           content,
           contentType,
-          coverImg,
+          coverImage,
           create_date,
           1,
         ],
