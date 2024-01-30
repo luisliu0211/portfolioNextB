@@ -2,7 +2,6 @@
 const express = require('express');
 const cors = require('cors'); // 引入 CORS 模組
 const mysql = require('mysql2');
-const matter = require('gray-matter');
 const path = require('path');
 const port = 8080;
 const fs = require('fs');
@@ -14,18 +13,6 @@ const multer = require('multer');
 const cookieParser = require('cookie-parser');
 const MarkdownIt = require('markdown-it');
 const md = new MarkdownIt();
-// 設定 Multer 存入的空間
-// const storage = multer.diskStorage({
-//   destination: function (req, file, cb) {
-//     cb(null, 'uploadsImages/'); // 指定存儲的目錄
-//   },
-//   filename: function (req, file, cb) {
-//     // 使用原始檔名，但避免名稱冲突
-//     const uniqueFilename = `${uuidv4()}.jpg`;
-//     cb(null, uniqueFilename);
-//   },
-// });
-
 // 設定 Multer
 const uploadImage = multer({
   storage: multer.diskStorage({
@@ -61,6 +48,7 @@ app.use(
 );
 
 app.use((req, res, next) => {
+  // 設定全域header
   const allowedOrigins = [
     'http://localhost:3000',
     'https://portfolio-next-neon.vercel.app',
@@ -70,7 +58,6 @@ app.use((req, res, next) => {
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
   }
-
   res.header(
     'Access-Control-Allow-Methods',
     'GET, POST, OPTIONS, PUT, PATCH, DELETE'
@@ -80,16 +67,14 @@ app.use((req, res, next) => {
     'Origin, X-Requested-With, Content-Type, Accept'
   );
   res.header('Access-Control-Allow-Credentials', 'true');
-
   next();
 });
-// 開啟 CORS
+// 提供靜態資源
+// 當使用者訪問這個路徑時，Express 會去 該資料夾中尋找相對應的靜態資源並回傳給使用者
 app.use('/uploadsImages', express.static('uploadsImages'));
 app.use('/uploadsMarkdown', express.static('uploadsMarkdown'));
 app.use('/public', express.static('public'));
-// 创建 Express 应用
 require('dotenv').config();
-// 创建数据库连接
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -106,27 +91,22 @@ db.connect((err) => {
 });
 // 使用中間件解析 JSON 格式的請求主體
 app.use(express.json());
+
 app.get('/', (req, res) => {
-  res.cookie('mycookie', 'myvalue', {
-    sameSite: 'None',
-    secure: true,
-  });
-  res.send('Hello World!');
+  res.send('welcom to my world');
 });
 app.get('/public/quotationList.xlsx', (req, res) => {
-  // 其他程式碼...
   res.setHeader(
     'Content-Type',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   );
-  // 組合絕對路徑，注意這裡使用 __dirname 取得當前檔案的目錄
+  // 使用 __dirname 取得當前檔案的目錄
   const filePath = path.join(__dirname, 'public', 'quotationList.xlsx');
   // 發送 Excel 檔案
   res.sendFile(filePath);
 });
 
 // TODO:權限登入驗證
-// 定义验证凭证的路由
 app.post('/api/auth/verify-credentials', async (req, res) => {
   const { email, password } = req.body;
   console.log(email, password);
@@ -134,7 +114,6 @@ app.post('/api/auth/verify-credentials', async (req, res) => {
     // 1. 从数据库中检索用户记录
     const queryEmail = 'SELECT * FROM user_account WHERE email = ?';
     const [user] = await db.promise().query(queryEmail, [email]);
-
     if (user.length === 1) {
       // 2. 检查密码是否匹配
       const hashedPassword = user[0].password;
@@ -168,36 +147,29 @@ app.post('/api/auth/verify-credentials', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-// 定义一个简单的路由，从数据库获取数据
 app.get('/api/works', (req, res) => {
-  // 执行数据库查询
-  console.log('Received API request');
+  console.log('查詢作品集');
   db.query('SELECT * FROM works LIMIT 8', (error, results, fields) => {
     if (error) {
       console.error('Error executing query: ' + error.stack);
       res.status(500).send('Internal Server Error');
       return;
     }
-    // console.log('Query executed successfully');
     res.json(results);
-    // 将查询结果发送给前端
   });
 });
 app.get('/api/skills', (req, res) => {
-  // 执行数据库查询
-  console.log('Received API request');
+  console.log('查詢技能表');
   db.query('SELECT * FROM skills', (error, results, fields) => {
     if (error) {
       console.error('Error executing query: ' + error.stack);
       res.status(500).send('Internal Server Error');
       return;
     }
-    // console.log('Query executed successfully');
     res.json(results);
-    // 将查询结果发送给前端
   });
 });
-// 验证文件类型为Markdown
+// 驗證文件是否是Markdown
 const markdownfileFilter = (req, file, cb) => {
   if (
     file.mimetype === 'text/markdown' ||
@@ -339,8 +311,6 @@ app.post('/api/json/saveFile', (req, res) => {
   const title = req.body.title;
   console.log(jsonData);
   const outputPath = path.join(__dirname, 'public', 'database'); // 指定目錄 'output'
-  // const jsonString = JSON.stringify(jsonData, null, 2);
-  // res.setHeader('Content-Type', 'application/json'); // 設定 Content-Type 為 application/json
   fs.writeFileSync(path.join(outputPath, `${title}.json`), jsonData);
   res.status(200).json({ message: 'Data saved successfully.' });
 });
@@ -367,7 +337,7 @@ app.get('/api/json/readFile', (req, res) => {
   });
 });
 app.put('/api/user/update', (req, res) => {
-  const updatedUserData = req.body; // 從請求主體中獲取更新的用戶數據
+  const updatedUserData = req.body;
   const { name, gender, password, character, image, id } = updatedUserData;
   const queryId =
     'UPDATE user_account SET name=?, gender=?, password=?, userType=?, image=? WHERE id=?';
@@ -384,8 +354,6 @@ app.put('/api/user/update', (req, res) => {
       res.status(200).json({ message: 'Data saved successfully' });
     }
   );
-  // 在這裡執行更新數據到數據庫的邏輯
-  // 這裡的邏輯應該根據你的數據庫結構進行修改
 });
 // TODO: 上傳圖片預覽檔案
 //uploadImage.single('image')
@@ -409,10 +377,8 @@ app.post('/api/uploadImages', (req, res) => {
   }
 });
 app.get('/api/quotes/:id', (req, res) => {
-  // 执行数据库查询
   const quoteId = req.params.id;
-  console.log(quoteId);
-  console.log('Received API request');
+  console.log('查詢報價');
   db.query(
     'SELECT * FROM quotationList WHERE id=?',
     [quoteId],
@@ -423,18 +389,14 @@ app.get('/api/quotes/:id', (req, res) => {
         return;
       }
       console.log(results, 'rr');
-      // console.log('Query executed successfully');
       res.json(results);
-      // 将查询结果发送给前端
     }
   );
 });
 app.get('/api/posts/:id', (req, res) => {
-  // 执行数据库查询
   const postId = req.params.id;
-
   console.log(postId, 'postID');
-  console.log('Received API request');
+  console.log('查詢文章');
   db.query(
     'SELECT * FROM posts WHERE id=?',
     [postId],
@@ -484,16 +446,11 @@ app.get('/api/todoList', (req, res) => {
       res.status(500).send('Internal Server Error');
       return;
     }
-    console.log('Insert query executed successfully');
     res.json(result);
-    // res.status(200).json({ message: 'Data query successfully' });
   });
 });
 app.patch('/api/todoList/:id', (req, res) => {
-  console.log('tsest');
-
   const todoId = req.params.id;
-  console.log(todoId, 'id');
   const querySelect = 'UPDATE todoList SET complete=1 WHERE id=?';
   db.query(querySelect, [todoId], (err, result) => {
     if (err) {
@@ -503,15 +460,11 @@ app.patch('/api/todoList/:id', (req, res) => {
     }
     console.log('todoList complete狀態更新成功');
     res.json(result);
-    // res.status(200).json({ message: 'Data query successfully' });
   });
 });
 app.get('/api/quotations', (req, res) => {
-  // const { select } = req.query;
   console.log(req.query);
-  // 从查询参数中获取 selectedRows
   const { selected } = req.query;
-  // 将 selectedRows 转换为数组
   let selectedRowsArray;
   let querySelect;
   if (selected) {
@@ -522,16 +475,13 @@ app.get('/api/quotations', (req, res) => {
   } else {
     querySelect = `SELECT * FROM quotationList`;
   }
-
   db.query(querySelect, (err, result) => {
     if (err) {
       console.error('Error executing insert query: ' + err.stack);
       res.status(500).send('Internal Server Error');
       return;
     }
-
     res.json(result);
-    // res.status(200).json({ message: 'Data query successfully' });
   });
 });
 app.post('/api/quotationAdd', (req, res) => {
@@ -636,13 +586,10 @@ app.post('/api/quotationAdd', (req, res) => {
     costUSDY: costUSDY,
     yarnInfoList: JSON.stringify(yarnInfoList),
   };
-  console.log(columnValues, 'v');
   const columns = Object.keys(columnValues).join(',');
-  console.log(Object.keys(columnValues));
   const values = Object.values(columnValues);
   const placeholders = values.map(() => '?').join(',');
   const queryInsertNew = `INSERT INTO quotationList (${columns}) VALUES (${placeholders})`;
-  console.log(values);
   db.query(queryInsertNew, values, (error, results) => {
     if (error) {
       console.error('執行插入查詢時發生錯誤：' + error.stack);
@@ -681,9 +628,8 @@ app.get('/api/posts', (req, res) => {
   console.log(tags);
   // tags切換為陣列
   const tagsArray = tags ? tags.split(',') : [];
-  // console.log(tagsArray.join(','), 'a');
   console.log(tagsArray);
-  // 构建 SQL 查询语句
+  // SQL
   let sqlQuery = 'SELECT * FROM posts WHERE 1 = 1';
   if (dateRangeFrom) {
     sqlQuery += ` AND create_date >= '${dateRangeFrom}'`;
@@ -711,10 +657,6 @@ app.get('/api/posts', (req, res) => {
       return;
     }
     res.setHeader('Content-Type', 'application/json');
-    // 返回 JSON 數據
-    // console.log(sqlQuery, 'jiji');
-    console.log('Query executed successfully');
-    // console.log(results);
     res.json(results);
     // 將查詢結果發送給前端
   });
@@ -737,9 +679,6 @@ app.post('/api/mdFile', uploadMarkdown.single('file'), async (req, res) => {
     const htmlContent = md.render(markdownContent);
     const savedHtmlContent = htmlContent.toString();
     console.log(savedHtmlContent, '轉成html標籤字串');
-    // console.log(htmlContent, '轉成html');
-    // console.log(markdownContent, '直接存成markdown格式');
-    // console.log(markdownBuffer, 'buttfr 2進位檔案');
     const sql =
       'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,?)';
     db.query(
@@ -830,17 +769,6 @@ app.post('/api/posts', (req, res) => {
         content,
         create_date,
       } = req.body;
-      // console.log(
-      //   title,
-      //   subTitle,
-      //   category,
-      //   tags,
-      //   contentType,
-      //   coverImg,
-      //   create_date,
-      //   content,
-      //   coverB64
-      // );
       const sql =
         'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,1)';
       db.query(
@@ -875,7 +803,6 @@ app.post('/api/posts', (req, res) => {
   }
 });
 
-// 启动 Express 应用
 const PORT = process.env.PORT || port;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
