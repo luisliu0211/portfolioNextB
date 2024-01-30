@@ -698,7 +698,7 @@ app.get('/api/posts', (req, res) => {
     sqlQuery += ` AND TRIM(title) LIKE '%${keywordSearch}%'`;
   }
   if (tagsArray.length > 0) {
-    sqlQuery += `AND JSON_CONTAINS(tags, '${JSON.stringify(tagsArray)}') = 1`;
+    sqlQuery += ` AND JSON_CONTAINS(tags, '${JSON.stringify(tagsArray)}') = 1`;
   }
   if (order) {
     sqlQuery += ` ORDER BY create_date ${order}`;
