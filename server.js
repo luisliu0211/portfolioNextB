@@ -1,5 +1,6 @@
 // 引入必要的模块
 const express = require('express');
+const session = require('express-session');
 const cors = require('cors'); // 引入 CORS 模組
 const mysql = require('mysql2');
 const path = require('path');
@@ -46,7 +47,13 @@ app.use(
     optionsSuccessStatus: 204,
   })
 );
-
+app.use(
+  session({
+    secret: 'your-secret-key',
+    resave: false,
+    saveUninitialized: true,
+  })
+);
 app.use((req, res, next) => {
   // 設定全域header
   const allowedOrigins = [
@@ -802,7 +809,20 @@ app.post('/api/posts', (req, res) => {
     }
   }
 });
-
+app.post('/api/loginTest', (req, res) => {
+  console.log('looginw');
+  console.log(req.body);
+  const { username, password } = req.body;
+  if (username === 'luis' && password === '1234') {
+    // 如果驗證成功，建立一個 session
+    req.session.user = { username: 'exampleUser' };
+    // 設定一個持久性的 Cookie，存儲一些身份驗證信息
+    res.cookie('userToken', 'exampleToken', { maxAge: 900000, httpOnly: true });
+    res.json({ success: true, message: 'Login successful' });
+  } else {
+    res.status(200).json({ message: 'oh no!' });
+  }
+});
 const PORT = process.env.PORT || port;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
