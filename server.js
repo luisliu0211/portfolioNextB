@@ -12,8 +12,12 @@ const { v4: uuidv4 } = require('uuid');
 // 上傳用的套 multer
 const multer = require('multer');
 const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 const MarkdownIt = require('markdown-it');
 const md = new MarkdownIt();
+const auth = require('./lib/auth');
+const verifyToken = require('./lib/verifyToken');
+const generateToken = require('./lib/generateCrypto');
 // 設定 Multer
 const uploadImage = multer({
   storage: multer.diskStorage({
@@ -38,6 +42,9 @@ const uploadImage = multer({
     }
   },
 });
+// 使用中間件解析 JSON 格式的請求主體
+app.use(express.json());
+
 app.use(cookieParser());
 app.use(
   cors({
@@ -49,9 +56,18 @@ app.use(
 );
 app.use(
   session({
-    secret: 'your-secret-key',
+    secret: 'luisgood', // 用於簽署 session ID 的密鑰
+    name: 'luistestsession', // 存放在cookie的key，如果不寫的話預設是connect.sid
     resave: false,
-    saveUninitialized: true,
+    //如果設定為true，則在一個request中，無論session有沒有被修改過，都會強制保存原本的session在session store。
+    // 會有這個設定是因為每個session store會有不一樣的配置，有些會定期去清理session，如果不想要session被清理掉的話，就要把這個設定為true。
+    saveUninitialized: false,
+    //設定為false可以避免存放太多空的session進入session store。
+    //另外，如果設為false，session在還沒被修改前也不會被存入cookie。
+    cookie: {
+      maxAge: 900000, // 這裡設定 session 的過期時間
+      httpOnly: true,
+    },
   })
 );
 app.use((req, res, next) => {
@@ -96,8 +112,6 @@ db.connect((err) => {
   }
   console.log('Connected to database');
 });
-// 使用中間件解析 JSON 格式的請求主體
-app.use(express.json());
 
 app.get('/', (req, res) => {
   res.send('welcom to my world');
@@ -809,19 +823,69 @@ app.post('/api/posts', (req, res) => {
     }
   }
 });
+const jwtSecretKey = 'luistest1234';
 app.post('/api/loginTest', (req, res) => {
-  console.log('looginw');
-  console.log(req.body);
   const { username, password } = req.body;
+
   if (username === 'luis' && password === '1234') {
-    // 如果驗證成功，建立一個 session
-    req.session.user = { username: 'exampleUser' };
-    // 設定一個持久性的 Cookie，存儲一些身份驗證信息
-    res.cookie('userToken', 'exampleToken', { maxAge: 900000, httpOnly: true });
+    const token = jwt.sign({ username }, jwtSecretKey, {
+      expiresIn: '900s',
+    });
+    // 設定一個持久性的 Cookie，存儲 Token
+    res.cookie('userToken', token, {
+      maxAge: 900000,
+      httpOnly: true,
+      sameSite: 'None',
+      secure: true,
+    });
     res.json({ success: true, message: 'Login successful' });
   } else {
     res.status(200).json({ message: 'oh no!' });
   }
+});
+app.get('/api/getDataTest', verifyToken, (req, res) => {
+  // 檢查 session
+  console.log('get data sucessfully');
+  const decoded = req.decodedToken;
+  const { username } = decoded;
+  let testToken = generateToken();
+  console.log(testToken, 'token');
+  res.json({ success: true, message: '驗證成功 抓取資料', username });
+});
+app.get('/api/logoutTest', (req, res) => {
+  // 清除 session
+  req.session.destroy();
+  // 清除 Cookie
+  res.clearCookie('userToken');
+  res.json({ success: true, message: 'Logout successful' });
+});
+
+app.post('/api/loginCookieSession', (req, res) => {
+  const { email, password } = req.body;
+  const sql = 'SELECT * FROM user_list WHERE email = ? AND password = ?';
+  db.query(sql, [email, password], (err, results) => {
+    if (err) {
+      return res
+        .status(500)
+        .json({ success: false, message: 'Internal server error' });
+    }
+    if (results.length === 0) {
+      return res.status(401).json({ success: false, message: '找不到使用者' });
+    }
+    req.session.user = results[0].name;
+    console.log(req.session.user);
+    res.json({ success: true, message: `歡迎登入${results[0].name}` });
+  });
+});
+app.get('/api/getdataCookieSesison', auth, (req, res) => {
+  console.log('get data sucessfully');
+  console.log(req.session);
+  res.json({ success: true, message: '抓取資料成功' });
+});
+app.get('/api/logoutCookieSession', (req, res) => {
+  req.session.destroy();
+  res.clearCookie('luistestsession');
+  res.json({ success: true, message: '登出成功' });
 });
 const PORT = process.env.PORT || port;
 app.listen(PORT, () => {
