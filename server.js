@@ -654,36 +654,22 @@ app.post('/api/todoList', (req, res) => {
 
   res.status(200).json({ message: 'Data saved successfully' });
 });
-///=====//
+app.get('/api/db-test', (req, res) => {
+  db.query('SELECT 1 + 1 as result', (error, results) => {
+    if (error) {
+      return res.status(500).json({
+        error: '数据库连接测试失败',
+        message: error.message,
+      });
+    }
+    res.json({
+      message: '数据库连接测试成功',
+      result: results[0].result,
+    });
+  });
+});
 app.get('/api/posts', (req, res) => {
-  console.log('filter:', req.query);
-  const { order, dateRangeFrom, dateRangeTo, category, keywordSearch, tags } =
-    req.query;
-  console.log(tags);
-  // tags切換為陣列
-  const tagsArray = tags ? tags.split(',') : [];
-  console.log(tagsArray);
-  // SQL
-  let sqlQuery = 'SELECT * FROM posts WHERE 1 = 1';
-  if (dateRangeFrom) {
-    sqlQuery += ` AND create_date >= '${dateRangeFrom}'`;
-  }
-  if (dateRangeTo) {
-    sqlQuery += ` AND create_date <= '${dateRangeTo}'`;
-  }
-  if (category) {
-    sqlQuery += ` AND category = '${category}'`;
-  }
-  if (keywordSearch) {
-    sqlQuery += ` AND TRIM(title) LIKE '%${keywordSearch}%'`;
-  }
-  if (tagsArray.length > 0) {
-    sqlQuery += ` AND JSON_CONTAINS(tags, '${JSON.stringify(tagsArray)}') = 1`;
-  }
-  if (order) {
-    sqlQuery += ` ORDER BY create_date ${order}`;
-  }
-  console.log(sqlQuery);
+  res.json({ message: 'API posts 测试路由正常' });
   db.query(sqlQuery, (error, results) => {
     if (error) {
       console.error('查詢時發生錯誤: ' + error.stack);
@@ -695,6 +681,46 @@ app.get('/api/posts', (req, res) => {
     // 將查詢結果發送給前端
   });
 });
+// app.get('/api/posts', (req, res) => {
+//   console.log('filter:', req.query);
+//   const { order, dateRangeFrom, dateRangeTo, category, keywordSearch, tags } =
+//     req.query;
+//   console.log(tags);
+//   // tags切換為陣列
+//   const tagsArray = tags ? tags.split(',') : [];
+//   console.log(tagsArray);
+//   // SQL
+//   let sqlQuery = 'SELECT * FROM posts WHERE 1 = 1';
+//   if (dateRangeFrom) {
+//     sqlQuery += ` AND create_date >= '${dateRangeFrom}'`;
+//   }
+//   if (dateRangeTo) {
+//     sqlQuery += ` AND create_date <= '${dateRangeTo}'`;
+//   }
+//   if (category) {
+//     sqlQuery += ` AND category = '${category}'`;
+//   }
+//   if (keywordSearch) {
+//     sqlQuery += ` AND TRIM(title) LIKE '%${keywordSearch}%'`;
+//   }
+//   if (tagsArray.length > 0) {
+//     sqlQuery += ` AND JSON_CONTAINS(tags, '${JSON.stringify(tagsArray)}') = 1`;
+//   }
+//   if (order) {
+//     sqlQuery += ` ORDER BY create_date ${order}`;
+//   }
+//   console.log(sqlQuery);
+//   db.query(sqlQuery, (error, results) => {
+//     if (error) {
+//       console.error('查詢時發生錯誤: ' + error.stack);
+//       res.status(500).send('內部伺服器錯誤');
+//       return;
+//     }
+//     res.setHeader('Content-Type', 'application/json');
+//     res.json(results);
+//     // 將查詢結果發送給前端
+//   });
+// });
 app.post('/api/mdFile', uploadMarkdown.single('file'), async (req, res) => {
   try {
     const {
