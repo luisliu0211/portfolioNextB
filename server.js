@@ -79,6 +79,7 @@ app.use((req, res, next) => {
   const allowedOrigins = [
     'http://localhost:3000',
     'https://portfolio-next-neon.vercel.app',
+    'https://luis.zeabur.app',
   ];
   const origin = req.headers.origin;
 
