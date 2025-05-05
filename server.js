@@ -116,6 +116,11 @@ db.connect((err) => {
     return;
   }
   console.log('Connected to database');
+  console.log(process.env.DB_HOST);
+  console.log(process.env.DB_USER);
+  console.log(process.env.DB_PASSWORD);
+  console.log(process.env.DB_DATABASE);
+  console.log(process.env.DB_PORT);
 });
 
 app.get('/', (req, res) => {
@@ -290,6 +295,9 @@ const uploadMarkdown = multer({
 //   }
 // );
 // 取得後端的md靜態欓 渲染到前端
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API 测试路由正常' });
+});
 app.get('/api/posts/markdown', async (req, res) => {
   try {
     const filePath = path.join(__dirname, 'uploadsMd', 'markdowntest.md');
@@ -656,7 +664,7 @@ app.get('/api/posts', (req, res) => {
   const tagsArray = tags ? tags.split(',') : [];
   console.log(tagsArray);
   // SQL
-  let sqlQuery = 'USE zeabur; SELECT * FROM posts WHERE 1 = 1';
+  let sqlQuery = 'SELECT * FROM posts WHERE 1 = 1';
   if (dateRangeFrom) {
     sqlQuery += ` AND create_date >= '${dateRangeFrom}'`;
   }
