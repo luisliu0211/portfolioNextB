@@ -656,7 +656,7 @@ app.get('/api/posts', (req, res) => {
   const tagsArray = tags ? tags.split(',') : [];
   console.log(tagsArray);
   // SQL
-  let sqlQuery = 'SELECT * FROM posts WHERE 1 = 1';
+  let sqlQuery = 'USE zeabur; SELECT * FROM posts WHERE 1 = 1';
   if (dateRangeFrom) {
     sqlQuery += ` AND create_date >= '${dateRangeFrom}'`;
   }
