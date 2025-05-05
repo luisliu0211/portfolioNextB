@@ -48,7 +48,11 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'https://portfolio-next-neon.vercel.app'],
+    origin: [
+      'http://localhost:3000',
+      'https://portfolio-next-neon.vercel.app',
+      'https://luis.zeabur.app',
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
     optionsSuccessStatus: 204,
