@@ -694,6 +694,8 @@ app.post('/api/todoList', (req, res) => {
 });
 app.get('/api/db-test', (req, res) => {
   pool.query('SELECT 1 + 1 as result', (error, results) => {
+    console.log(results, 'results');
+    console.log(error, 'error');
     if (error) {
       return res.status(500).json({
         error: '数据库连接测试失败',
