@@ -692,6 +692,17 @@ app.post('/api/todoList', (req, res) => {
 
   res.status(200).json({ message: 'Data saved successfully' });
 });
+app.get('/api/env-check', (req, res) => {
+  res.json({
+    database: {
+      host: process.env.DB_HOST ? '已设置' : '未设置',
+      user: process.env.DB_USER ? '已设置' : '未设置',
+      database: process.env.DB_DATABASE ? '已设置' : '未设置',
+      port: process.env.DB_PORT ? '已设置' : '未设置',
+    },
+    time: new Date().toISOString(),
+  });
+});
 app.get('/api/db-test', (req, res) => {
   pool.query('SELECT 1 + 1 as result', (error, results) => {
     console.log(results, 'results');
