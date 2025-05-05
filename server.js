@@ -103,25 +103,63 @@ app.use('/uploadsImages', express.static('uploadsImages'));
 app.use('/uploadsMarkdown', express.static('uploadsMarkdown'));
 app.use('/public', express.static('public'));
 require('dotenv').config();
-const db = mysql.createConnection({
+// const db = mysql.createConnection({
+//   host: process.env.DB_HOST,
+//   user: process.env.DB_USER,
+//   password: process.env.DB_PASSWORD,
+//   database: process.env.DB_DATABASE,
+//   port: process.env.DB_PORT,
+// });
+const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
   port: process.env.DB_PORT,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
-db.connect((err) => {
+// 测试连接池
+pool.getConnection((err, connection) => {
   if (err) {
-    console.error('Database connection failed: ' + err.stack);
+    console.error('数据库连接池错误:', err);
+    console.error('环境变量:', {
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      database: process.env.DB_DATABASE,
+      port: process.env.DB_PORT,
+    });
     return;
   }
-  console.log('Connected to database');
-  console.log(process.env.DB_HOST);
-  console.log(process.env.DB_USER);
-  console.log(process.env.DB_PASSWORD);
-  console.log(process.env.DB_DATABASE);
-  console.log(process.env.DB_PORT);
+  console.log('数据库连接池创建成功');
+  console.log('当前数据库配置:', {
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    database: process.env.DB_DATABASE,
+    port: process.env.DB_PORT,
+  });
+  connection.release(); // 记得释放连接
 });
+// 添加错误监听
+pool.on('error', (err) => {
+  console.error('连接池错误:', err);
+  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+    console.log('数据库连接丢失，请检查数据库状态');
+  }
+});
+// db.connect((err) => {
+//   if (err) {
+//     console.error('Database connection failed: ' + err.stack);
+//     return;
+//   }
+//   console.log('Connected to database');
+//   console.log(process.env.DB_HOST);
+//   console.log(process.env.DB_USER);
+//   console.log(process.env.DB_PASSWORD);
+//   console.log(process.env.DB_DATABASE);
+//   console.log(process.env.DB_PORT);
+// });
 
 app.get('/', (req, res) => {
   res.send('welcom to my world');
@@ -180,7 +218,7 @@ app.post('/api/auth/verify-credentials', async (req, res) => {
 });
 app.get('/api/works', (req, res) => {
   console.log('查詢作品集');
-  db.query('SELECT * FROM works LIMIT 8', (error, results, fields) => {
+  pool.query('SELECT * FROM works LIMIT 8', (error, results, fields) => {
     if (error) {
       console.error('Error executing query: ' + error.stack);
       res.status(500).send('Internal Server Error');
@@ -191,7 +229,7 @@ app.get('/api/works', (req, res) => {
 });
 app.get('/api/skills', (req, res) => {
   console.log('查詢技能表');
-  db.query('SELECT * FROM skills', (error, results, fields) => {
+  pool.query('SELECT * FROM skills', (error, results, fields) => {
     if (error) {
       console.error('Error executing query: ' + error.stack);
       res.status(500).send('Internal Server Error');
@@ -313,7 +351,7 @@ app.post('/api/saveLoginData', (req, res) => {
   const { name, email, password } = req.body;
   // TODO: 檢查email是否重複 有重複返回 該信箱已註冊的提示
   const queryEmailTaken = 'SELECT * FROM user_account WHERE email = ?';
-  db.query(queryEmailTaken, [email], (err, queryRes) => {
+  pool.query(queryEmailTaken, [email], (err, queryRes) => {
     if (err) {
       console.error('Error executing query: ' + err.stack);
       res.status(500).send('Internal Server Error');
@@ -328,7 +366,7 @@ app.post('/api/saveLoginData', (req, res) => {
       // 如果查詢結果中沒有資料，表示 email 未被使用，執行新增資料的操作
       const queryInsertNew =
         'INSERT INTO user_account (name, email, password, account_type) VALUES (?, ?, ?, 1)';
-      db.query(queryInsertNew, [name, email, password], (err, insertRes) => {
+      pool.query(queryInsertNew, [name, email, password], (err, insertRes) => {
         if (err) {
           console.error('Error executing insert query: ' + err.stack);
           res.status(500).send('Internal Server Error');
@@ -375,7 +413,7 @@ app.put('/api/user/update', (req, res) => {
   const { name, gender, password, character, image, id } = updatedUserData;
   const queryId =
     'UPDATE user_account SET name=?, gender=?, password=?, userType=?, image=? WHERE id=?';
-  db.query(
+  pool.query(
     queryId,
     [name, gender, password, character, image, id],
     (err, queryRes) => {
@@ -413,7 +451,7 @@ app.post('/api/uploadImages', (req, res) => {
 app.get('/api/quotes/:id', (req, res) => {
   const quoteId = req.params.id;
   console.log('查詢報價');
-  db.query(
+  pool.query(
     'SELECT * FROM quotationList WHERE id=?',
     [quoteId],
     (error, results, fields) => {
@@ -431,7 +469,7 @@ app.get('/api/posts/:id', (req, res) => {
   const postId = req.params.id;
   console.log(postId, 'postID');
   console.log('查詢文章');
-  db.query(
+  pool.query(
     'SELECT * FROM posts WHERE id=?',
     [postId],
     (error, results, fields) => {
@@ -474,7 +512,7 @@ app.get('/api/posts/:id', (req, res) => {
 // });
 app.get('/api/todoList', (req, res) => {
   const querySelect = 'SELECT * FROM todoList where user_id=?';
-  db.query(querySelect, [1], (err, result) => {
+  pool.query(querySelect, [1], (err, result) => {
     if (err) {
       console.error('Error executing insert query: ' + err.stack);
       res.status(500).send('Internal Server Error');
@@ -486,7 +524,7 @@ app.get('/api/todoList', (req, res) => {
 app.patch('/api/todoList/:id', (req, res) => {
   const todoId = req.params.id;
   const querySelect = 'UPDATE todoList SET complete=1 WHERE id=?';
-  db.query(querySelect, [todoId], (err, result) => {
+  pool.query(querySelect, [todoId], (err, result) => {
     if (err) {
       console.error('Error executing insert query: ' + err.stack);
       res.status(500).send('Internal Server Error');
@@ -509,7 +547,7 @@ app.get('/api/quotations', (req, res) => {
   } else {
     querySelect = `SELECT * FROM quotationList`;
   }
-  db.query(querySelect, (err, result) => {
+  pool.query(querySelect, (err, result) => {
     if (err) {
       console.error('Error executing insert query: ' + err.stack);
       res.status(500).send('Internal Server Error');
@@ -624,7 +662,7 @@ app.post('/api/quotationAdd', (req, res) => {
   const values = Object.values(columnValues);
   const placeholders = values.map(() => '?').join(',');
   const queryInsertNew = `INSERT INTO quotationList (${columns}) VALUES (${placeholders})`;
-  db.query(queryInsertNew, values, (error, results) => {
+  pool.query(queryInsertNew, values, (error, results) => {
     if (error) {
       console.error('執行插入查詢時發生錯誤：' + error.stack);
       res.status(500).send('內部伺服器錯誤');
@@ -642,7 +680,7 @@ app.post('/api/todoList', (req, res) => {
     const queryInsertNew =
       'INSERT INTO todoList (user_id, text, date, complete) VALUES (1, ?, ?, ?)';
 
-    db.query(queryInsertNew, [todoContent, date, complete], (err, result) => {
+    pool.query(queryInsertNew, [todoContent, date, complete], (err, result) => {
       if (err) {
         console.error('Error executing insert query: ' + err.stack);
         res.status(500).send('Internal Server Error');
@@ -655,7 +693,7 @@ app.post('/api/todoList', (req, res) => {
   res.status(200).json({ message: 'Data saved successfully' });
 });
 app.get('/api/db-test', (req, res) => {
-  db.query('SELECT 1 + 1 as result', (error, results) => {
+  pool.query('SELECT 1 + 1 as result', (error, results) => {
     if (error) {
       return res.status(500).json({
         error: '数据库连接测试失败',
@@ -668,9 +706,37 @@ app.get('/api/db-test', (req, res) => {
     });
   });
 });
+
 app.get('/api/posts', (req, res) => {
-  res.json({ message: 'API posts 测试路由正常' });
-  db.query(sqlQuery, (error, results) => {
+  console.log('filter:', req.query);
+  const { order, dateRangeFrom, dateRangeTo, category, keywordSearch, tags } =
+    req.query;
+  console.log(tags);
+  // tags切換為陣列
+  const tagsArray = tags ? tags.split(',') : [];
+  console.log(tagsArray);
+  // SQL
+  let sqlQuery = 'SELECT * FROM posts WHERE 1 = 1';
+  if (dateRangeFrom) {
+    sqlQuery += ` AND create_date >= '${dateRangeFrom}'`;
+  }
+  if (dateRangeTo) {
+    sqlQuery += ` AND create_date <= '${dateRangeTo}'`;
+  }
+  if (category) {
+    sqlQuery += ` AND category = '${category}'`;
+  }
+  if (keywordSearch) {
+    sqlQuery += ` AND TRIM(title) LIKE '%${keywordSearch}%'`;
+  }
+  if (tagsArray.length > 0) {
+    sqlQuery += ` AND JSON_CONTAINS(tags, '${JSON.stringify(tagsArray)}') = 1`;
+  }
+  if (order) {
+    sqlQuery += ` ORDER BY create_date ${order}`;
+  }
+  console.log(sqlQuery);
+  pool.query(sqlQuery, (error, results) => {
     if (error) {
       console.error('查詢時發生錯誤: ' + error.stack);
       res.status(500).send('內部伺服器錯誤');
@@ -681,46 +747,6 @@ app.get('/api/posts', (req, res) => {
     // 將查詢結果發送給前端
   });
 });
-// app.get('/api/posts', (req, res) => {
-//   console.log('filter:', req.query);
-//   const { order, dateRangeFrom, dateRangeTo, category, keywordSearch, tags } =
-//     req.query;
-//   console.log(tags);
-//   // tags切換為陣列
-//   const tagsArray = tags ? tags.split(',') : [];
-//   console.log(tagsArray);
-//   // SQL
-//   let sqlQuery = 'SELECT * FROM posts WHERE 1 = 1';
-//   if (dateRangeFrom) {
-//     sqlQuery += ` AND create_date >= '${dateRangeFrom}'`;
-//   }
-//   if (dateRangeTo) {
-//     sqlQuery += ` AND create_date <= '${dateRangeTo}'`;
-//   }
-//   if (category) {
-//     sqlQuery += ` AND category = '${category}'`;
-//   }
-//   if (keywordSearch) {
-//     sqlQuery += ` AND TRIM(title) LIKE '%${keywordSearch}%'`;
-//   }
-//   if (tagsArray.length > 0) {
-//     sqlQuery += ` AND JSON_CONTAINS(tags, '${JSON.stringify(tagsArray)}') = 1`;
-//   }
-//   if (order) {
-//     sqlQuery += ` ORDER BY create_date ${order}`;
-//   }
-//   console.log(sqlQuery);
-//   db.query(sqlQuery, (error, results) => {
-//     if (error) {
-//       console.error('查詢時發生錯誤: ' + error.stack);
-//       res.status(500).send('內部伺服器錯誤');
-//       return;
-//     }
-//     res.setHeader('Content-Type', 'application/json');
-//     res.json(results);
-//     // 將查詢結果發送給前端
-//   });
-// });
 app.post('/api/mdFile', uploadMarkdown.single('file'), async (req, res) => {
   try {
     const {
@@ -741,7 +767,7 @@ app.post('/api/mdFile', uploadMarkdown.single('file'), async (req, res) => {
     console.log(savedHtmlContent, '轉成html標籤字串');
     const sql =
       'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,?)';
-    db.query(
+    pool.query(
       sql,
       [
         title,
@@ -788,7 +814,7 @@ app.post('/api/posts', (req, res) => {
       } = req.body;
       console.log(coverImage);
       const sql = `UPDATE posts SET title=?, subTitle=?, category=?, tags=?, content=?, contentType=?, coverImage=?, revised_date=?, authur=? WHERE id= ${id}`;
-      db.query(
+      pool.query(
         sql,
         [
           title,
@@ -831,7 +857,7 @@ app.post('/api/posts', (req, res) => {
       } = req.body;
       const sql =
         'INSERT INTO posts (title, subTitle, category, tags, content, contentType, coverImage, create_date,authur) VALUES (?, ?, ?, ?, ?, ? ,? ,? ,1)';
-      db.query(
+      pool.query(
         sql,
         [
           title,
@@ -902,7 +928,7 @@ app.get('/api/logoutTest', (req, res) => {
 app.post('/api/loginCookieSession', (req, res) => {
   const { email, password } = req.body;
   const sql = 'SELECT * FROM user_list WHERE email = ? AND password = ?';
-  db.query(sql, [email, password], (err, results) => {
+  pool.query(sql, [email, password], (err, results) => {
     if (err) {
       return res
         .status(500)
