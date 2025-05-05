@@ -229,14 +229,17 @@ app.get('/api/works', (req, res) => {
 });
 app.get('/api/skills', (req, res) => {
   console.log('查詢技能表');
-  pool.query('SELECT * FROM skills', (error, results, fields) => {
-    if (error) {
-      console.error('Error executing query: ' + error.stack);
-      res.status(500).send('Internal Server Error');
-      return;
+  pool.query(
+    'SELECT skills.id,skills.name AS skill_name,skills.level,skills.description,skill_categories.category_name FROM skills JOIN skill_categories ON skills.category_id = skill_categories.id;',
+    (error, results, fields) => {
+      if (error) {
+        console.error('Error executing query: ' + error.stack);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 // 驗證文件是否是Markdown
 const markdownfileFilter = (req, file, cb) => {
@@ -701,22 +704,6 @@ app.get('/api/env-check', (req, res) => {
       port: process.env.DB_PORT ? '已设置' : '未设置',
     },
     time: new Date().toISOString(),
-  });
-});
-app.get('/api/db-test', (req, res) => {
-  pool.query('SELECT 1 + 1 as result', (error, results) => {
-    console.log(results, 'results');
-    console.log(error, 'error');
-    if (error) {
-      return res.status(500).json({
-        error: '数据库连接测试失败',
-        message: error.message,
-      });
-    }
-    res.json({
-      message: '数据库连接测试成功',
-      result: results[0].result,
-    });
   });
 });
 
